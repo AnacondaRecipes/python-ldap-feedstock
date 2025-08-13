@@ -10,42 +10,65 @@ source:
   sha256: 60464c8fc25e71e0fd40449a24eae482dcd0fb7fcf823e7de627a6525b3e0d12
 
 build:
-  number: 0
+  number: 1
   skip: true  # [win]
-  # no openldap on s390x due missing nodejs
-  skip: True  # [linux and s390x]
-  script: '{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vvv '
+  script:
+    # For whatever reason upstream resigned from libldap_r dynamic lib naming, although Linux build still uses it
+    # https://lists.openldap.org/hyperkitty/list/openldap-devel@openldap.org/thread/EZVZ7VFBIUTLS4VKOLB5YX74HHNLCX4W/
+    - ln -s ${PREFIX}/lib/libldap.so ${PREFIX}/lib/libldap_r.so  # [linux]
+    - {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --ignore-installed -vvv
 
 requirements:
   build:
+    - {{ stdlib('c') }}
     - {{ compiler('c') }}
   host:
     - pip
-    - setuptools
     - wheel
     - python
-    - pyasn1
-    - pyasn1-modules
-    - openldap >=2.4.11,<2.5
+    - setuptools
+    # https://github.com/python-ldap/python-ldap/blob/python-ldap-3.4.0/CHANGES#L95-L97: OSX comes with preinstalled libldap
+    - openldap {{ openldap }}  # [linux]
   run:
     - python
     - pyasn1
     - pyasn1-modules
-    - openldap >=2.4.11,<2.5
+
+# sldap is not available at runtime on either platform: https://github.com/python-ldap/python-ldap/blob/a73ce552db1d5250e62ea88999a5b2d480cd8153/tox.ini#L70
+{% set specific_tests = "t_cidict.py" %}
+{% set specific_tests = specific_tests + " t_ldap_dn.py" %}
+{% set specific_tests = specific_tests + " t_ldap_filter.py" %}
+{% set specific_tests = specific_tests + " t_ldap_functions.py" %}
+{% set specific_tests = specific_tests + " t_ldap_modlist.py" %}
+{% set specific_tests = specific_tests + " t_ldap_schema_tokenizer.py" %}
+{% set specific_tests = specific_tests + " t_ldapurl.py" %}
+{% set specific_tests = specific_tests + " t_ldif.py" %}
+{% set specific_tests = specific_tests + " t_untested_mods.py" %}
 
 test:
+  source_files:
+    - Tests
   imports:
     - ldap
     - ldap.controls
     - ldap.extop
     - ldap.schema
+  requires:
+    - pip
+    - pytest
+  commands:
+    - pip check
+    - cd Tests && pytest -v {{ specific_tests }}
 
 about:
   home: https://www.python-ldap.org/
-  license: Python Software Foundation
-  license_family: OTHER
+  license: PSF-2.0
+  license_family: PSF
   license_file: LICENCE
   summary: Python modules for implementing LDAP clients
+  description: |
+    python-ldap provides an object-oriented API to access LDAP directory servers 
+    from Python programs. Mainly it wraps the OpenLDAP client libs for that purpose.
   doc_url: https://www.python-ldap.org/en/latest/
   dev_url: https://github.com/python-ldap/python-ldap
 
