@@ -11,9 +11,9 @@ source:
 
 build:
   number: 0
+  # openldap is not available on Windows
   skip: true  # [win]
-  script:
-    - {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --ignore-installed -vvv
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --ignore-installed -vvv
 
 requirements:
   build:
@@ -22,18 +22,17 @@ requirements:
   host:
     - python
     - setuptools
+    - setuptools-scm
     - pip
-    - wheel
-    - pyasn1 >=0.3.7
-    - pyasn1-modules >=0.1.5
     - openldap {{ openldap }}
   run:
     - python
     - pyasn1 >=0.3.7
     - pyasn1-modules >=0.1.5
-    - openldap {{ openldap }}
 
 test:
+  # Slapd builds are skipped in 'openldap' feedstock: https://github.com/AnacondaRecipes/openldap-feedstock/blob/master/recipe/build.sh
+  # Upstream tests need slapd, the rest of the tests are very basic and not testing the LDAP functionality of the package
   requires:
     - pip
   imports:
@@ -45,7 +44,7 @@ test:
     - pip check
 
 about:
-  home: https://www.python-ldap.org/
+  home: https://www.python-ldap.org
   license: PSF-2.0 and MIT
   license_family: Other
   license_file:
