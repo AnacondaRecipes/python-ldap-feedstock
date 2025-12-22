@@ -1,75 +1,60 @@
 {% set name = "python-ldap" %}
-{% set version = "3.4.0" %}
+{% set version = "3.4.5" %}
 
 package:
   name: {{ name|lower }}
   version: {{ version }}
 
 source:
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: 60464c8fc25e71e0fd40449a24eae482dcd0fb7fcf823e7de627a6525b3e0d12
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name.replace('-', '_') }}-{{ version }}.tar.gz
+  sha256: b2f6ef1c37fe2c6a5a85212efe71311ee21847766a7d45fcb711f3b270a5f79a
 
 build:
-  number: 1
+  number: 0
+  # openldap is not available on Windows
   skip: true  # [win]
-  script:
-    # For whatever reason upstream resigned from libldap_r dynamic lib naming, although Linux build still uses it
-    # https://lists.openldap.org/hyperkitty/list/openldap-devel@openldap.org/thread/EZVZ7VFBIUTLS4VKOLB5YX74HHNLCX4W/
-    - ln -s ${PREFIX}/lib/libldap.so ${PREFIX}/lib/libldap_r.so  # [linux]
-    - {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --ignore-installed -vvv
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --ignore-installed -vvv
 
 requirements:
   build:
     - {{ stdlib('c') }}
     - {{ compiler('c') }}
   host:
-    - pip
-    - wheel
     - python
     - setuptools
-    # https://github.com/python-ldap/python-ldap/blob/python-ldap-3.4.0/CHANGES#L95-L97: OSX comes with preinstalled libldap
-    - openldap {{ openldap }}  # [linux]
+    - setuptools-scm
+    - pip
+    - openldap {{ openldap }}
   run:
     - python
-    - pyasn1
-    - pyasn1-modules
-
-# sldap is not available at runtime on either platform: https://github.com/python-ldap/python-ldap/blob/a73ce552db1d5250e62ea88999a5b2d480cd8153/tox.ini#L70
-{% set specific_tests = "t_cidict.py" %}
-{% set specific_tests = specific_tests + " t_ldap_dn.py" %}
-{% set specific_tests = specific_tests + " t_ldap_filter.py" %}
-{% set specific_tests = specific_tests + " t_ldap_functions.py" %}
-{% set specific_tests = specific_tests + " t_ldap_modlist.py" %}
-{% set specific_tests = specific_tests + " t_ldap_schema_tokenizer.py" %}
-{% set specific_tests = specific_tests + " t_ldapurl.py" %}
-{% set specific_tests = specific_tests + " t_ldif.py" %}
-{% set specific_tests = specific_tests + " t_untested_mods.py" %}
+    - pyasn1 >=0.3.7
+    - pyasn1-modules >=0.1.5
 
 test:
-  source_files:
-    - Tests
+  # Slapd builds are skipped in 'openldap' feedstock: https://github.com/AnacondaRecipes/openldap-feedstock/blob/master/recipe/build.sh
+  # Upstream tests need slapd, the rest of the tests are very basic and not testing the LDAP functionality of the package
+  requires:
+    - pip
   imports:
     - ldap
     - ldap.controls
     - ldap.extop
     - ldap.schema
-  requires:
-    - pip
-    - pytest
   commands:
     - pip check
-    - cd Tests && pytest -v {{ specific_tests }}
 
 about:
-  home: https://www.python-ldap.org/
-  license: PSF-2.0
-  license_family: PSF
-  license_file: LICENCE
+  home: https://www.python-ldap.org
+  license: PSF-2.0 and MIT
+  license_family: Other
+  license_file:
+    - LICENCE
+    - LICENCE.MIT
   summary: Python modules for implementing LDAP clients
   description: |
-    python-ldap provides an object-oriented API to access LDAP directory servers 
+    python-ldap provides an object-oriented API to access LDAP directory servers
     from Python programs. Mainly it wraps the OpenLDAP client libs for that purpose.
-  doc_url: https://www.python-ldap.org/en/latest/
+  doc_url: https://www.python-ldap.org
   dev_url: https://github.com/python-ldap/python-ldap
 
 extra:
